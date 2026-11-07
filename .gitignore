@@ -1,0 +1,11 @@
+# Dev-time capture of the source site (not published)
+_ref/
+
+# Source copy: never commit installed deps or build output
+source/**/node_modules/
+source/smith-chart/dist/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*.log

@@ -1,0 +1,428 @@
+// const { calculateImpedance } = require('../src/impedanceFunctions.js');
+import { expect, test } from "vitest";
+import { readFileSync /*, writeFileSync*/ } from "fs";
+import { join } from "path";
+import { allImpedanceCalculations, calculateImpedance } from "../src/impedanceFunctions.js";
+
+const FLOAT_PRECISION = 10;
+
+function expectProcessedImpedanceResults(actual, expected) {
+  const { refReal, refImag, ...expectedRest } = expected;
+  expect(actual).toMatchObject(expectedRest);
+  expect(actual.refReal).toBeCloseTo(refReal, FLOAT_PRECISION);
+  expect(actual.refImag).toBeCloseTo(refImag, FLOAT_PRECISION);
+}
+
+function expectImpedanceArcs(actual, expected, precision = FLOAT_PRECISION) {
+  expect(actual.length).toBe(expected.length);
+  for (let i = 0; i < actual.length; i++) {
+    expect(actual[i].length).toBe(expected[i].length);
+    for (let j = 0; j < actual[i].length; j++) {
+      expect(actual[i][j].real).toBeCloseTo(expected[i][j].real, precision);
+      expect(actual[i][j].imaginary).toBeCloseTo(expected[i][j].imaginary, precision);
+    }
+  }
+}
+
+test("Transmission line impedance test", () => {
+  const circuit = [
+    { name: "blackBox", real: 25, imaginary: -25 },
+    { name: "transmissionLine", value: 30, unit: "mm", zo: 50, eeff: 1 },
+  ];
+  const impedance = calculateImpedance(circuit, 2440e6, 3);
+
+  const expected = [
+    [{ real: 25, imaginary: -25 }],
+    [
+      { real: 25, imaginary: -25 },
+      { real: 19.127360088725794, imaginary: -1.8022511881224714 },
+      { real: 23.13903818769952, imaginary: 20.867214473980738 },
+      { real: 46.53103192423643, imaginary: 48.109436254243874 },
+    ],
+  ];
+  expectImpedanceArcs(impedance, expected);
+});
+
+test("Impedance L-R-Shorted-Stub", () => {
+  const circuit = [
+    {
+      name: "blackBox",
+      real: "50",
+      imaginary: "0",
+    },
+    {
+      value: "1",
+      unit: "nH",
+      name: "shortedInd",
+    },
+    {
+      value: "20",
+      unit: "Ω",
+      name: "seriesRes",
+    },
+    {
+      value: "50",
+      unit: "mm",
+      zo: "50",
+      eeff: "1",
+      name: "shortedStub",
+      slider: 0,
+    },
+  ];
+  const settings = {
+    zo: 50,
+    frequency: 2440,
+    frequencyUnit: "MHz",
+    fSpan: 0,
+    fSpanUnit: "MHz",
+    zMarkers: [],
+    vswrCircles: [],
+    qCircles: [],
+    nfCircles: [],
+    gainInCircles: [],
+    gainOutCircles: [],
+  };
+  const [processedImpedanceResults, _spanResults, _multiZResults, _gainArray, _noiseArray, _numericalFrequency, _RefIn] = allImpedanceCalculations(
+    circuit,
+    settings,
+  );
+
+  expectProcessedImpedanceResults(processedImpedanceResults, {
+    zStr: "27.88 - 11.2j",
+    zPolarStr: "30.05 ∠ -21.88°",
+    refStr: "-0.258 - 0.181j",
+    refPolarStr: "0.315 ∠ -145.0°",
+    vswr: "1.92",
+    qFactor: "0.40",
+    refReal: -0.2580011952086847,
+    refImag: -0.18089971346407316,
+    admString: "0.0309 + 0.0124j",
+  });
+});
+
+test("Cap with ESL and ESR", () => {
+  const circuit = [
+    {
+      name: "blackBox",
+      real: 50,
+      imaginary: 0,
+      tolerance: 0,
+    },
+    {
+      name: "seriesCap",
+      value: 1,
+      unit: "pF",
+      tolerance: 0,
+      esr: 23,
+      esl: 2,
+    },
+  ];
+  const settings = {
+    zo: 50,
+    frequency: 2440,
+    frequencyUnit: "MHz",
+    fSpan: 0,
+    fSpanUnit: "MHz",
+    fRes: 10,
+    zMarkers: [],
+    vswrCircles: [],
+    qCircles: [],
+    nfCircles: [],
+    gainInCircles: [],
+    gainOutCircles: [],
+  };
+  const [processedImpedanceResults, _spanResults, _multiZResults, _gainArray, _noiseArray, _numericalFrequency, _RefIn] = allImpedanceCalculations(
+    circuit,
+    settings,
+  );
+
+  expectProcessedImpedanceResults(processedImpedanceResults, {
+    zStr: "73.00 - 34.57j",
+    zPolarStr: "80.77 ∠ -25.34°",
+    refStr: "0.246 - 0.212j",
+    refPolarStr: "0.325 ∠ -40.7°",
+    vswr: "1.96",
+    qFactor: "0.47",
+    refReal: 0.2464977396576432,
+    refImag: -0.21174939752436645,
+    admString: "0.0112 + 0.00530j",
+  });
+});
+
+test("Ideal Transformer", () => {
+  const circuit = [
+    {
+      name: "blackBox",
+      real: "20",
+      imaginary: "20",
+      tolerance: 0,
+    },
+    {
+      name: "transformer",
+      l1: 2,
+      unit_l1: "nH",
+      l2: 1,
+      unit_l2: "nH",
+      k: 2.04,
+      model: "ideal",
+    },
+  ];
+  const settings = {
+    zo: 50,
+    frequency: 2440,
+    frequencyUnit: "MHz",
+    fSpan: 0,
+    fSpanUnit: "MHz",
+    fRes: 10,
+    zMarkers: [],
+    vswrCircles: [],
+    qCircles: [],
+    nfCircles: [],
+    gainInCircles: [],
+    gainOutCircles: [],
+  };
+  const [processedImpedanceResults, _spanResults, _multiZResults, _gainArray, _noiseArray, _numericalFrequency, _RefIn] = allImpedanceCalculations(
+    circuit,
+    settings,
+  );
+
+  expectProcessedImpedanceResults(processedImpedanceResults, {
+    zStr: "83.23 + 83.23j",
+    zPolarStr: "117.71 ∠ 45.00°",
+    refStr: "0.460 + 0.337j",
+    refPolarStr: "0.570 ∠ 36.2°",
+    vswr: "3.66",
+    qFactor: "1.00",
+    refReal: 0.46012557939346155,
+    refImag: 0.33726753164347456,
+    admString: "0.00601 - 0.00601j",
+  });
+});
+
+test("Coupled Transformer", () => {
+  const circuit = [
+    {
+      name: "blackBox",
+      real: "20",
+      imaginary: "20",
+      tolerance: 0,
+    },
+    {
+      name: "transformer",
+      l1: 2,
+      unit_l1: "nH",
+      l2: 3,
+      unit_l2: "nH",
+      k: 4,
+    },
+  ];
+  const settings = {
+    zo: 50,
+    frequency: 2440,
+    frequencyUnit: "MHz",
+    fSpan: 0,
+    fSpanUnit: "MHz",
+    fRes: 10,
+    zMarkers: [],
+    vswrCircles: [],
+    qCircles: [],
+    nfCircles: [],
+    gainInCircles: [],
+    gainOutCircles: [],
+  };
+  const [processedImpedanceResults, _spanResults, _multiZResults, _gainArray, _noiseArray, _numericalFrequency, _RefIn] = allImpedanceCalculations(
+    circuit,
+    settings,
+  );
+
+  expectProcessedImpedanceResults(processedImpedanceResults, {
+    zStr: "152.12 - 339.33j",
+    zPolarStr: "371.87 ∠ -65.85°",
+    refStr: "0.870 - 0.218j",
+    refPolarStr: "0.897 ∠ -14.0°",
+    vswr: "18.5",
+    qFactor: "2.23",
+    refReal: 0.8704366392639906,
+    refImag: -0.2175237548329506,
+    admString: "0.00110 + 0.00245j",
+  });
+});
+
+test("Impedance s1p", () => {
+  const circuit = [
+    {
+      data: {
+        140000000: {
+          S11: {
+            magnitude: 0.7243827370732345,
+            angle: -174.09948044605608,
+          },
+          zS11: {
+            real: 8.012449079222487,
+            imaginary: -2.510862781461325,
+          },
+        },
+        140307234: {
+          S11: {
+            magnitude: 0.7090881308992324,
+            angle: -176.30650977518508,
+          },
+          zS11: {
+            real: 8.519324626702963,
+            imaginary: -1.5653914993540468,
+          },
+        },
+        140614468: {
+          S11: {
+            magnitude: 0.694448795742179,
+            angle: -178.5803036021335,
+          },
+          zS11: {
+            real: 9.017580940342125,
+            imaginary: -0.5993440957180086,
+          },
+        },
+      },
+      noise: [],
+      settings: {
+        freq_unit: "Hz",
+        param: "S",
+        format: "RI",
+        zo: 50,
+      },
+      error: null,
+      name: "sparam",
+      type: "s1p",
+    },
+    {
+      name: "loadTerm",
+      real: "8",
+      imaginary: "1.5",
+      tolerance: "0",
+    },
+  ];
+  const settings = {
+    zo: 50,
+    frequency: 140307234,
+    frequencyUnit: "Hz",
+    fSpan: 614468,
+    fSpanUnit: "Hz",
+    zMarkers: [],
+    vswrCircles: [],
+    qCircles: [],
+    nfCircles: [],
+    gainInCircles: [],
+    gainOutCircles: [],
+  };
+  const [_processedImpedanceResults, _spanResults, _multiZResults, _gainArray, _noiseArray, _numericalFrequency, RefIn] = allImpedanceCalculations(
+    circuit,
+    settings,
+  );
+
+  expect(RefIn).toEqual([
+    {
+      140000000: {
+        magnitude: 0.24998758547548827,
+        angle: -86.20988590050354,
+      },
+      140307234: {
+        magnitude: 0.18820664965246797,
+        angle: -80.15770700629807,
+      },
+      140614468: {
+        magnitude: 0.13689974653743542,
+        angle: -67.16944818269882,
+      },
+    },
+  ]);
+});
+
+function compareMultiZResults(a, b) {
+  for (const x in a) {
+    for (const y in a[x].arcs) {
+      for (const z in a[x].arcs[y]) {
+        for (const l in a[x].arcs[y][z]) {
+          // console.log("Comparing", a[x].arcs[y][z][l], b[x].arcs[y][z][l]);
+          expect(a[x].arcs[y][z][l].real).toBeCloseTo(b[x].arcs[y][z][l].real, 5);
+          expect(a[x].arcs[y][z][l].imaginary).toBeCloseTo(b[x].arcs[y][z][l].imaginary, 5);
+        }
+      }
+    }
+    // expect(a[x].arcs).toEqual(b[x].arcs);
+    expect(a[x].ZvsF).toEqual(b[x].ZvsF);
+  }
+}
+
+test("Matched s2p circuit", () => {
+  const outputPath = join(process.cwd(), "tests", "impedance_s2p.json");
+  const circuit = JSON.parse(readFileSync(outputPath, "utf8"));
+  const settings = {
+    zo: 50,
+    frequency: 1.4,
+    frequencyUnit: "GHz",
+    fSpan: 1.2,
+    fSpanUnit: "GHz",
+    zMarkers: [],
+    vswrCircles: [],
+    qCircles: [],
+    nfCircles: [],
+    gainInCircles: [1],
+    gainOutCircles: [1],
+  };
+
+  const [_processedImpedanceResults, spanResults, multiZResults, gainArray, noiseArray, numericalFrequency, _RefIn] = allImpedanceCalculations(
+    circuit,
+    settings,
+  );
+
+  // const tmpPath = join(process.cwd(), "tests", "tmp.json");
+  // writeFileSync(tmpPath, JSON.stringify(multiZResults, null, 1), "utf8");
+
+  const multiZPath = join(process.cwd(), "tests", "impedance_s2p_result.json");
+  const res_multiZ = JSON.parse(readFileSync(multiZPath, "utf8"));
+  compareMultiZResults(multiZResults, res_multiZ);
+
+  expect(numericalFrequency).toEqual(1400000000);
+  expect(gainArray).toEqual([
+    {
+      800000000: 22.693531214089145,
+      1400000000: 12.561553295736996,
+      2000000000: 3.293622417785331,
+    },
+  ]);
+  expect(noiseArray).toEqual([{ 1400000000: 1.8259050592115345 }]);
+  expect(spanResults).toEqual([
+    {
+      800000000: {
+        z: {
+          real: 39.96011933637156,
+          imaginary: 5.56030566938637,
+        },
+        reflAtSZo: {
+          real: -0.10737318722085801,
+          imaginary: 0.06844514498705355,
+        },
+      },
+      1400000000: {
+        z: {
+          real: 59.91263130921331,
+          imaginary: 23.7710888072318,
+        },
+        reflAtSZo: {
+          real: 0.13084038625384226,
+          imaginary: 0.18797539572949273,
+        },
+      },
+      2000000000: {
+        z: {
+          real: 76.393202250021,
+          imaginary: -36.32712640026803,
+        },
+        reflAtSZo: {
+          real: 0.2691880848258462,
+          imaginary: -0.21004528997404232,
+        },
+      },
+    },
+  ]);
+});

@@ -1,0 +1,44 @@
+{
+  "name": "smith-chart",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "lint": "eslint . && prettier --check src tests && node scripts/check-locale-keys.mjs",
+    "prettier": "prettier --write src tests",
+    "preview": "vite preview",
+    "test": "vitest",
+    "serve": "serve -l 8080 dist"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@hyvor/hyvor-talk-react": "^1.0.2",
+    "@mui/icons-material": "^9.0.1",
+    "@mui/material": "^9.0.1",
+    "d3-selection": "^3.0.0",
+    "i18next": "^26.3.0",
+    "lodash": "^4.18.1",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8",
+    "serve": "^14.2.6",
+    "uplot": "^1.6.32",
+    "uplot-react": "^1.2.4"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/react": "^19.2.16",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^10.4.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "prettier": "^3.8.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

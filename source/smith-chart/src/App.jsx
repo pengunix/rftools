@@ -1,0 +1,404 @@
+/* global gtag */
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation, Trans } from "react-i18next";
+import Box from "@mui/material/Box";
+import Typography from "@mui/material/Typography";
+import Link from "@mui/material/Link";
+import useMediaQuery from "@mui/material/useMediaQuery";
+import ViewColumnIcon from "@mui/icons-material/ViewColumn";
+import ViewAgendaIcon from "@mui/icons-material/ViewAgenda";
+
+import Grid from "@mui/material/Grid";
+import Card from "@mui/material/Card";
+import Snackbar from "@mui/material/Snackbar";
+import SnackbarContent from "@mui/material/SnackbarContent";
+import Dialog from "@mui/material/Dialog";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
+import Button from "@mui/material/Button";
+import CardContent from "@mui/material/CardContent";
+import ContentCopy from "@mui/icons-material/ContentCopy";
+import { ThemeProvider } from "@mui/material/styles";
+import NavBar from "./NavBar.jsx";
+import Footer from "./Footer.jsx";
+import Circuit from "./Circuit.jsx";
+import Graph from "./Graph.jsx";
+import Results from "./Results.jsx";
+import Settings from "./Settings.jsx";
+import Equations from "./Equations.jsx";
+import ReleaseNotes from "./ReleaseNotes.jsx";
+import Tutorials from "./Tutorials.jsx";
+import ToggleButton from "@mui/material/ToggleButton";
+import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
+
+import { syncObjectToUrl, updateObjectFromUrl } from "./urlFunctions.js"; // Import the syncObjectToUrl function
+import { HELPER_ASSISTANT_CONTEXT } from "./helperAssistantContext.js";
+import { theme, convertSettingsToFloat } from "./commonFunctions.js";
+import { circuitComponents } from "./circuitComponents.js";
+
+import { allImpedanceCalculations, calculateImpedance } from "./impedanceFunctions.js";
+import { solveComponentParams } from "./pickSolve.js";
+// import { sParamFrequencyRange } from "./sparam.js"; // Import the sParamFrequencyRange function
+
+import debounce from "lodash/debounce";
+
+const CHATGPT_HELPER_PROJECT_URL = "https://chatgpt.com/g/g-p-69ee7cba04888191bc878377f29b9f76-onlinesmithchart-helper/project";
+const STACKED_LAYOUT_STORAGE_KEY = "smith-chart-stacked-layout";
+
+function readStackedLayoutPreference() {
+  try {
+    return localStorage.getItem(STACKED_LAYOUT_STORAGE_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+const initialState = {
+  zo: 50,
+  frequency: 2440,
+  frequencyUnit: "MHz",
+  fSpan: 0,
+  fSpanUnit: "MHz",
+  fRes: 10,
+  zMarkers: [],
+  vswrCircles: [],
+  qCircles: [],
+  nfCircles: [],
+  gainInCircles: [],
+  gainOutCircles: [],
+};
+
+const initialCircuit = [{ name: "blackBox", ...circuitComponents.blackBox.default }];
+
+const params = new URLSearchParams(window.location.search);
+var [stateInURL, defaultCircuit, urlContainsState] = updateObjectFromUrl(initialState, initialCircuit, params);
+console.log("stateInURL", stateInURL, defaultCircuit, urlContainsState);
+
+function App() {
+  const { t, i18n } = useTranslation();
+  const isLargeScreen = useMediaQuery(theme.breakpoints.up("md"));
+  const [userCircuit, setUserCircuit] = useState(defaultCircuit);
+  const [settings, setSettings] = useState(stateInURL);
+  const [urlSnackbar, setUrlSnackbar] = useState(false);
+  const [showIdeal, setShowIdeal] = useState(false);
+  const [pickMode, setPickMode] = useState({ active: false });
+  const [pickFeedback, setPickFeedback] = useState({ open: false, ok: true });
+  const [helperModalOpen, setHelperModalOpen] = useState(false);
+  const [helperCopiedOpen, setHelperCopiedOpen] = useState(false);
+  const [stackedLayout, setStackedLayout] = useState(readStackedLayoutPreference);
+
+  const settingsFloat = convertSettingsToFloat(JSON.parse(JSON.stringify(settings)));
+
+  //debounding the URL syncing because 100 updateHistory in 10s causes chrome to crash, which happens when using sliders
+  const debouncedSync = useMemo(() => debounce(syncObjectToUrl, 1000), []);
+  // Run when dependencies change
+  useEffect(() => {
+    debouncedSync(settings, initialState, userCircuit, initialCircuit);
+  }, [settings, userCircuit, debouncedSync]);
+
+  const [processedImpedanceResults, spanResults, multiZResults, gainArray, noiseArray, numericalFrequency, RefIn, noiseFrequency] =
+    allImpedanceCalculations(userCircuit, settingsFloat, showIdeal);
+
+  //check if esr or esl exists, and if it does exist check that it is not 0 or ''
+  const nonIdealUsed = userCircuit.findIndex((c) => (c.esr != null && c.esr != 0 && c.esr !== "") || (c.esl != null && c.esl != 0 && c.esl !== ""));
+
+  const sParamIndex = userCircuit.findIndex((c) => c.name === "sparam");
+  const sParameters = sParamIndex === -1 ? null : userCircuit[sParamIndex];
+  const chosenSparameter =
+    sParamIndex === -1 ? null : { ...userCircuit[sParamIndex].data[numericalFrequency], zo: userCircuit[sParamIndex].settings.zo };
+  const chosenNoiseParameter = noiseFrequency === -1 ? null : userCircuit[sParamIndex].noise[noiseFrequency];
+  // console.log("chosenNoiseParameter", chosenNoiseParameter);
+
+  const handleSnackbarClick = () => {
+    setSettings({ ...initialState });
+    setUserCircuit([{ ...initialCircuit[0] }]);
+    setUrlSnackbar(false);
+  };
+
+  // Compute the solved value for component idx given a clicked target impedance zt.
+  // Returns { value, unit, approx, zp } or null if unsolvable.
+  function solvePickAt(idx, zt) {
+    const comp = userCircuit[idx];
+    if (!comp) return null;
+    const f = numericalFrequency;
+    const beforeCircuit = userCircuit.slice(0, idx);
+    let zp = { real: 50, imaginary: 0 };
+    if (beforeCircuit.length > 0) {
+      const res = calculateImpedance(JSON.parse(JSON.stringify(beforeCircuit)), f, 1, showIdeal);
+      const lastArr = res[res.length - 1];
+      zp = lastArr[lastArr.length - 1];
+    }
+    const solved = solveComponentParams(comp.name, zp, zt, f, comp);
+    if (!solved) return null;
+    return { ...solved, zp };
+  }
+
+  // Apply solved value into the circuit at idx.
+  function applySolvedValue(idx, solved) {
+    setUserCircuit((z) => {
+      const next = [...z];
+      next[idx] = { ...next[idx], value: solved.value, unit: solved.unit };
+      return next;
+    });
+  }
+
+  // Solve the value of the component at pickMode.index from a point clicked on the chart.
+  function handlePickPoint(zt) {
+    if (!pickMode || !pickMode.active) return;
+    const idx = pickMode.index;
+    const solved = solvePickAt(idx, zt);
+    if (!solved) {
+      setPickFeedback({ open: true, ok: false });
+      setPickMode({ active: false });
+      return;
+    }
+    applySolvedValue(idx, solved);
+    setPickFeedback({ open: true, ok: true, approx: !!solved.approx });
+    setPickMode({ active: false });
+  }
+
+  // Dragging a marker: continuously re-solve the active pick component from a chart point.
+  function handleDragPick(zt) {
+    const idx = pickMode && pickMode.active ? pickMode.index : pickMode && pickMode.dragIndex;
+    if (idx == null) return;
+    const solved = solvePickAt(idx, zt);
+    if (!solved) return;
+    applySolvedValue(idx, solved);
+  }
+
+  async function handleCopyHelperContext() {
+    try {
+      await navigator.clipboard.writeText(HELPER_ASSISTANT_CONTEXT);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = HELPER_ASSISTANT_CONTEXT;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+    }
+    setHelperCopiedOpen(true);
+  }
+
+  //open the snackbar after 1 seconds if there is state in the URL
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (urlContainsState) {
+        setUrlSnackbar(true);
+      }
+    }, 1000); // 1 seconds
+    // Optional: Clean up the timer if the component unmounts early
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    document.title = t("meta.pageTitle");
+    const meta = document.querySelector('meta[name="description"]');
+    if (meta) meta.setAttribute("content", t("meta.pageDescription"));
+  }, [i18n.language, t]);
+
+  function handleLayoutChange(_event, newLayout) {
+    if (newLayout == null) return;
+    const isStacked = newLayout === "stacked";
+    setStackedLayout(isStacked);
+    try {
+      localStorage.setItem(STACKED_LAYOUT_STORAGE_KEY, String(isStacked));
+    } catch {
+      // localStorage unavailable
+    }
+  }
+
+  const useStackedLayout = isLargeScreen && stackedLayout;
+  const circuitGridSize = useStackedLayout ? { xs: 12 } : { sm: 12, md: 6 };
+  const graphGridSize = useStackedLayout ? { xs: 12 } : { xs: 12, sm: 12, md: 6, lg: 6 };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <Snackbar
+        open={pickFeedback.open}
+        autoHideDuration={2600}
+        onClose={() => setPickFeedback({ open: false, ok: true })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <SnackbarContent
+          message={
+            pickFeedback.ok
+              ? t(pickFeedback.approx ? "circuit.pickApprox" : "circuit.pickSolved")
+              : t("circuit.pickUnsolvable")
+          }
+          sx={{ backgroundColor: pickFeedback.ok ? "#2e7d32" : "#c62828", color: "#fff" }}
+        />
+      </Snackbar>
+      <Snackbar
+        open={helperCopiedOpen}
+        autoHideDuration={4000}
+        onClose={() => setHelperCopiedOpen(false)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        message={t("app.helperCopiedSnackbar")}
+      />
+      <Dialog open={helperModalOpen} onClose={() => setHelperModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>{t("app.helperModalTitle")}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" sx={{ mb: 2 }} component="div">
+            <Trans
+              i18nKey="app.helperModalIntro"
+              components={{
+                chatgptProject: <Link href={CHATGPT_HELPER_PROJECT_URL} target="_blank" rel="noopener noreferrer" underline="always" />,
+              }}
+            />
+          </Typography>
+          <Button variant="contained" startIcon={<ContentCopy />} onClick={() => void handleCopyHelperContext()} fullWidth>
+            {t("app.helperCopyButton")}
+          </Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHelperModalOpen(false)}>{t("common.cancel")}</Button>
+        </DialogActions>
+      </Dialog>
+      <Snackbar
+        open={urlSnackbar}
+        autoHideDuration={10000}
+        onClose={() => setUrlSnackbar(false)}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+        message="This Snackbar will be dismissed in 5 seconds."
+      >
+        <SnackbarContent
+          message={t("app.urlLoadedSnackbar")}
+          sx={{
+            backgroundColor: "#2196f3",
+            color: "#fff",
+            cursor: "pointer",
+            maxWidth: 200,
+          }}
+          onClick={handleSnackbarClick}
+        />
+      </Snackbar>
+      <NavBar />
+      <Box
+        sx={{
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 1,
+          color: "rgb(37, 50, 64)",
+          mx: 3,
+          mt: 1,
+        }}
+      >
+        <Typography sx={{ flex: 1, minWidth: 240 }}>{t("app.intro")}</Typography>
+        {isLargeScreen && (
+          <ToggleButtonGroup
+            value={stackedLayout ? "stacked" : "sideBySide"}
+            exclusive
+            onChange={handleLayoutChange}
+            size="small"
+            aria-label={t("app.layoutToggleAria")}
+          >
+            <ToggleButton value="sideBySide" aria-label={t("app.layoutSideBySide")}>
+              <ViewColumnIcon sx={{ mr: 0.75 }} fontSize="small" />
+              {t("app.layoutSideBySide")}
+            </ToggleButton>
+            <ToggleButton value="stacked" aria-label={t("app.layoutStacked")}>
+              <ViewAgendaIcon sx={{ mr: 0.75 }} fontSize="small" />
+              {t("app.layoutStacked")}
+            </ToggleButton>
+          </ToggleButtonGroup>
+        )}
+      </Box>
+      <Box sx={{ flexGrow: 1, mx: { xs: 0, sm: 1, lg: 2 }, mt: 1 }}>
+        <Grid container spacing={{ lg: 2, xs: 1 }}>
+          <Grid size={circuitGridSize}>
+            <Card>
+              <CardContent>
+                <Circuit
+                  userCircuit={userCircuit}
+                  setUserCircuit={setUserCircuit}
+                  frequency={numericalFrequency}
+                  setSettings={setSettings}
+                  showIdeal={showIdeal}
+                  stackedLayout={useStackedLayout}
+                  pickMode={pickMode}
+                  setPickMode={setPickMode}
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={graphGridSize}>
+            <Card sx={{ padding: 0 }}>
+              <Graph
+                zResultsSrc={multiZResults}
+                zo={settingsFloat.zo}
+                spanResults={spanResults}
+                qCircles={settings.qCircles}
+                vswrCircles={settings.vswrCircles}
+                nfCircles={settings.nfCircles}
+                gainInCircles={settings.gainInCircles}
+                gainOutCircles={settings.gainOutCircles}
+                zMarkers={settings.zMarkers}
+                reflection_real={processedImpedanceResults.refReal}
+                reflection_imag={processedImpedanceResults.refImag}
+                sParameters={sParameters}
+                chosenSparameter={chosenSparameter}
+                freqUnit={settings.frequencyUnit}
+                frequency={numericalFrequency}
+                chosenNoiseParameter={chosenNoiseParameter}
+                nonIdealUsed={nonIdealUsed}
+                showIdeal={showIdeal}
+                setShowIdeal={setShowIdeal}
+                pickMode={pickMode}
+                onPickPoint={handlePickPoint}
+                onDragPoint={handleDragPick}
+              />
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 6 }}>
+            <Card>
+              <CardContent>
+                <Results
+                  zProc={processedImpedanceResults}
+                  spanResults={spanResults}
+                  freqUnit={settings.frequencyUnit}
+                  sParameters={sParameters}
+                  gainResults={gainArray}
+                  noiseArray={noiseArray}
+                  RefIn={RefIn}
+                  zo={settingsFloat.zo}
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 6 }}>
+            <Card>
+              <CardContent>
+                <Settings
+                  settings={settings}
+                  setSettings={setSettings}
+                  usedF={numericalFrequency}
+                  chosenSparameter={chosenSparameter}
+                  chosenNoiseParameter={chosenNoiseParameter}
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+          <Grid size={12}>
+            <Tutorials />
+          </Grid>
+          <Grid size={12}>
+            <Equations />
+          </Grid>
+          <Grid size={12}>
+            <ReleaseNotes />
+          </Grid>
+        </Grid>
+      </Box>
+      <Footer />
+    </ThemeProvider>
+  );
+}
+
+export default App;

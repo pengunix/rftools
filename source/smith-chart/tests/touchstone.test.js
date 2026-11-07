@@ -1,0 +1,227 @@
+// const { calculateImpedance } = require('../src/impedanceFunctions.js');
+import { expect, test } from "vitest";
+import { sparamGainCircles, sparamZout, parseTouchstoneFile, stabilityCircles } from "../src/sparam.js";
+import { readFileSync /*, writeFileSync*/ } from "fs";
+import { join } from "path";
+
+test("Touchstone s2p small", () => {
+  const touchstop_S2P = `
+# GHZ    S   RI   R   50.0
+1.0000  0.3926  -0.1211  -0.0003  -0.0021  -0.0003  -0.0021  0.3926  -0.1211
+2.0000  0.3517  -0.3054  -0.0096  -0.0298  -0.0096  -0.0298  0.3517  -0.3054
+10.000  0.3419   0.3336  -0.0134   0.0379  -0.0134   0.0379  0.3419   0.3336
+! Noise parameters
+ 1.0000  2.0000  -0.1211  -0.0003  .4
+ 2.0000  2.5000  -0.3054  -0.0096  .45
+ 3.0000  3.0000  -0.6916  -0.6933  .5
+ 4.0000  3.5000  -0.3756   0.4617  .55
+ 5.0000  4.0000   0.3880   0.6848  .6
+ 6.0000  4.5000   0.0343   0.0383  .65
+ 7.0000  5.0000   0.6916   0.6933  .7
+ 8.0000  5.5000   0.5659   0.1000  .75
+ 9.0000  6.0000   0.4145   0.0307  .8
+10.0000  6.5000   0.3336   0.0134  .85
+`;
+  const sparameters = parseTouchstoneFile(touchstop_S2P);
+  const outputPath = join(process.cwd(), "tests", "s2p-1-output.json");
+  const expectedData = JSON.parse(readFileSync(outputPath, "utf8"));
+  // writeFileSync(outputPath, JSON.stringify(sparameters.data, null, 1), "utf8");
+  expect(sparameters.data).toEqual(expectedData);
+  expect(sparameters.noise).toEqual({
+    1000000000: {
+      rn: 20,
+      fmin: 2,
+      gamma: { magnitude: -0.1211, angle: -0.0003 },
+      yGamma: { real: 0.025511434747870782, imaginary: -3.283400256919881e-8 },
+    },
+    2000000000: {
+      rn: 22.5,
+      fmin: 2.5,
+      gamma: { magnitude: -0.3054, angle: -0.0096 },
+      yGamma: { real: 0.03758709982155337, imaginary: -0.0000042423652523559385 },
+    },
+    10000000000: {
+      rn: 42.5,
+      fmin: 6.5,
+      gamma: { magnitude: 0.3336, angle: 0.0134 },
+      yGamma: { real: 0.009994001302296574, imaginary: -0.000001754757171921433 },
+    },
+  });
+});
+
+function compareParsedData(a, b) {
+  for (const f in a) {
+    for (const s in a[f]) {
+      for (const v in a[f][s]) {
+        expect(a[f][s][v]).toBeCloseTo(b[f][s][v], 5);
+      }
+    }
+  }
+}
+
+test("Touchstone s1p small", () => {
+  // Read from file 'valid.s1p'
+  const filePath = join(process.cwd(), "tests", "valid.s1p");
+  const exampleTouchstone = readFileSync(filePath, "utf8");
+
+  const sparameters = parseTouchstoneFile(exampleTouchstone);
+
+  // Write sparameters.data to a file
+  const outputPath = join(process.cwd(), "tests", "valid_s1p-output.json");
+  const expectedData = JSON.parse(readFileSync(outputPath, "utf8"));
+
+  // writeFileSync(outputPath, JSON.stringify(sparameters.data, null, 1), "utf8");
+
+  expect(sparameters.settings).toEqual({
+    freq_unit: "Hz",
+    param: "S",
+    format: "RI",
+    zo: 50,
+  });
+  compareParsedData(sparameters.data, expectedData);
+  // expect(sparameters.data).toEqual(expectedData);
+  expect(sparameters.noise).toEqual({});
+  expect(sparameters.type).toEqual("s1p");
+
+  // Add your assertions here
+});
+
+test("Gain circles", () => {
+  const s11 = { magnitude: 0.533, angle: 176.6 };
+  const gain = sparamGainCircles(s11, 50, 1);
+
+  const expectedResult = {
+    center: { real: 16.936724300849555, imaginary: -1.3138262966109417 },
+    radius: 0.23142961975593543,
+  };
+  expect(gain).toEqual(expectedResult);
+});
+
+test("Rout from sparam", () => {
+  const res = sparamZout(
+    {
+      S11: { magnitude: 0.533, angle: 176.6 },
+      S12: { magnitude: 2.8, angle: 64.5 },
+      S21: { magnitude: 0.06, angle: 58.4 },
+      S22: { magnitude: 0.604, angle: -58.3 },
+    },
+    { magnitude: 0.38, angle: -177.66 },
+  );
+  const expected = {
+    polar: {
+      angle: -57.91737956641843,
+      magnitude: 0.6839346593988852,
+    },
+    rectangular: {
+      imaginary: -0.5794862591862048,
+      real: 0.3632661472549401,
+    },
+  };
+  expect(res).toEqual(expected);
+});
+
+test("Test stability circles", () => {
+  const sparam = {
+    S11: {
+      magnitude: 0.72,
+      angle: -46,
+    },
+    S21: {
+      magnitude: 17.973,
+      angle: 148.5,
+    },
+    S12: {
+      magnitude: 0.03,
+      angle: 68.5,
+    },
+    S22: {
+      magnitude: 0.88,
+      angle: -23.6,
+    },
+  };
+  const a = stabilityCircles(sparam, 50);
+
+  expect(a).toEqual({
+    center: { real: -55.656222191198005, imaginary: 49.338584816038534 },
+    radius: 1.9435518506543061,
+  });
+
+  // const [x, y] = impedanceToSmithChart(a.center.real / 50, a.center.imaginary / 50, 300);
+});
+
+//FIXME - test sparamNoiseCircles directly
+
+test("Touchstone missing options line with ! column header", () => {
+  const userInput = `! freq S11_mag S11_ang S21_mag S21_ang S12_mag S12_ang S22_mag S22_ang
+1.800 -8.52 -165.3 -25.4 78.5 -28.7 -82.3 -12.3 142.7
+1.850 -8.94 -158.2 -25.1 75.2 -28.5 -80.1 -12.5 138.4`;
+
+  const result = parseTouchstoneFile(userInput);
+
+  expect(result.error).toContain("Missing Touchstone options line");
+  expect(result.error).toContain("!");
+  expect(result.error).toContain("Your magnitude values look like DB");
+  expect(result.error).toContain("# GHz S DB R 50");
+});
+
+test("Touchstone missing options line starting with data", () => {
+  const result = parseTouchstoneFile("1.800 -8.52 -165.3 -25.4 78.5 -28.7 -82.3 -12.3 142.7");
+
+  expect(result.error).toContain("Missing Touchstone options line");
+  expect(result.error).toContain("1.800");
+  expect(result.error).toContain("DB");
+});
+
+test("Touchstone invalid # options line", () => {
+  const result = parseTouchstoneFile("# GHz S MA\n1.0 0.1 10");
+
+  expect(result.error).toContain("Unrecognized Touchstone options line");
+});
+
+test("Touchstone user data parses with DB header", () => {
+  const userInput = `# GHz S DB R 50
+1.800 -8.52 -165.3 -25.4 78.5 -28.7 -82.3 -12.3 142.7
+1.850 -8.94 -158.2 -25.1 75.2 -28.5 -80.1 -12.5 138.4`;
+
+  const result = parseTouchstoneFile(userInput);
+
+  expect(result.error).toBeNull();
+  expect(result.type).toBe("s2p");
+  expect(Object.keys(result.data)).toHaveLength(2);
+});
+
+test("Touchstone accepts lowercase dB format token", () => {
+  const result = parseTouchstoneFile("# GHz S dB R 50\n1.0 -10 45");
+
+  expect(result.error).toBeNull();
+  expect(result.settings.format).toBe("DB");
+});
+
+test("Touchstone 2.050 GHz row stays in frequency order", () => {
+  const userInput = `# GHz S DB R 50
+1.800 -8.52 -165.3 -25.4 78.5 -28.7 -82.3 -12.3 142.7
+1.850 -8.94 -158.2 -25.1 75.2 -28.5 -80.1 -12.5 138.4
+1.900 -9.41 -151.6 -24.8 71.8 -28.3 -77.8 -12.8 134.2
+1.950 -9.93 -145.4 -24.5 68.3 -28.1 -75.4 -13.1 129.8
+2.000 -10.46 -139.5 -24.2 64.7 -27.9 -72.9 -13.5 125.3
+2.050 -11.02 -133.8 -23.9 61.0 -27.7 -70.3 -13.9 120.7
+2.100 -11.59 -128.2 -23.6 57.2 -27.5 -67.6 -14.4 115.9
+2.150 -12.15 -122.7 -23.3 53.3 -27.3 -64.8 -14.9 110.9
+2.200 -12.04 -117.2 -23.1 49.3 -27.1 -61.9 -15.5 105.8
+2.250 -11.23 -111.5 -22.8 45.2 -26.9 -58.9 -16.1 100.5
+2.300 -10.15 -105.7 -22.6 41.0 -26.7 -55.8 -16.8 95.1
+2.350 -9.28 -99.8 -22.4 36.7 -26.5 -52.6 -17.6 89.5
+2.400 -8.73 -93.8 -22.2 32.3 -26.3 -49.3 -18.4 83.8`;
+
+  const result = parseTouchstoneFile(userInput);
+  const freqsGHz = Object.keys(result.data).map((f) => Number(f) / 1e9);
+
+  expect(result.error).toBeNull();
+  expect(freqsGHz).toEqual([1.8, 1.85, 1.9, 1.95, 2, 2.05, 2.1, 2.15, 2.2, 2.25, 2.3, 2.35, 2.4]);
+});
+
+test("Touchstone invalid format token does not crash", () => {
+  const result = parseTouchstoneFile("# GHz S M R 50\n1.0 0.5 45");
+
+  expect(result.error).toContain("Unsupported data format");
+});

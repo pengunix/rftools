@@ -1,0 +1,153 @@
+:root {
+  --bg: #b8fff1;
+  --nav: #253240;
+  --accent: #b8fff1;
+  --ink: #12211d;
+  --muted: #4a5d58;
+  --card: #ffffff;
+  --line: #d5e9e3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+    "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  color: var(--ink);
+  background: linear-gradient(160deg, #b8fff1 0%, #d9fff5 55%, #eef8f4 100%);
+  display: flex;
+  flex-direction: column;
+}
+
+.hub-header {
+  background: var(--nav);
+  color: var(--accent);
+  padding: 28px 24px;
+  text-align: center;
+}
+
+.hub-header h1 {
+  margin: 0 0 6px;
+  font-size: 1.9rem;
+  letter-spacing: 2px;
+}
+
+.hub-header p {
+  margin: 0;
+  opacity: 0.75;
+  font-size: 0.95rem;
+}
+
+.hub-main {
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.tool-card {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 24px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 6px 24px rgba(37, 50, 64, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.tool-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(37, 50, 64, 0.16);
+}
+
+.tool-card--soon {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tool-card--soon:hover {
+  transform: none;
+  box-shadow: 0 6px 24px rgba(37, 50, 64, 0.08);
+}
+
+.tool-icon {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #e6fbf4;
+}
+
+.tool-icon--soon {
+  font-size: 2rem;
+  color: #8aa39d;
+}
+
+.tool-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.tool-body h2 {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.badge {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  color: #25564b;
+  background: #d5f6ec;
+  padding: 3px 8px;
+  border-radius: 999px;
+}
+
+.tool-body p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.55;
+}
+
+.tool-arrow {
+  font-size: 1.5rem;
+  color: #25564b;
+}
+
+.hub-footer {
+  background: var(--nav);
+  color: var(--accent);
+  text-align: center;
+  padding: 16px;
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+@media (max-width: 560px) {
+  .tool-card {
+    flex-direction: column;
+    text-align: center;
+  }
+  .tool-body h2 {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}

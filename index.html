@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="妙妙小工具 - 一组实用的在线小工具集" />
+    <title>妙妙小工具</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <link rel="stylesheet" href="./css/hub.css" />
+  </head>
+  <body>
+    <header class="hub-header">
+      <h1>妙妙小工具</h1>
+      <p>一组实用的在线小工具集合</p>
+    </header>
+    <main class="hub-main">
+      <a class="tool-card" href="./tools/smith-chart/">
+        <div class="tool-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64" width="56" height="56">
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#25564b" stroke-width="2" />
+            <circle cx="60" cy="32" r="28" fill="none" stroke="#7bb8a9" stroke-width="1.2" />
+            <circle cx="16" cy="32" r="28" fill="none" stroke="#7bb8a9" stroke-width="1.2" />
+            <path d="M4 32 H60" stroke="#25564b" stroke-width="1.2" />
+            <circle cx="4" cy="32" r="28" fill="none" stroke="#25564b" stroke-width="2" />
+          </svg>
+        </div>
+        <div class="tool-body">
+          <h2>史密斯圆图 <span class="badge">Smith Chart</span></h2>
+          <p>在线史密斯圆图工具：可视化并计算阻抗匹配，绘制 S 参数、驻波比、电阻/电抗圆与导纳。</p>
+        </div>
+        <span class="tool-arrow" aria-hidden="true">→</span>
+      </a>
+
+      <div class="tool-card tool-card--soon">
+        <div class="tool-icon tool-icon--soon" aria-hidden="true">＋</div>
+        <div class="tool-body">
+          <h2>更多工具即将上线</h2>
+          <p>这里会持续添加新的小工具，敬请期待。</p>
+        </div>
+      </div>
+    </main>
+    <footer class="hub-footer">
+      <span>© <span id="year"></span> 妙妙小工具</span>
+    </footer>
+    <script>
+      document.getElementById("year").textContent = new Date().getFullYear();
+    </script>
+  </body>
+</html>
