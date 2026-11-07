@@ -48,9 +48,10 @@ body {
 .lang-select select { background: transparent; color: var(--accent); border: none; outline: none; font-size: 0.8125rem; cursor: pointer; }
 .lang-select select option { color: #12211d; }
 .nav-btn {
-  display: inline-flex; align-items: center; background: var(--accent); color: var(--nav);
-  text-decoration: none; padding: 8px 10px; border-radius: 6px;
+  display: inline-flex; align-items: center; gap: 6px; background: var(--accent); color: var(--nav);
+  text-decoration: none; padding: 8px 12px; border-radius: 6px; font-weight: 600; font-size: 0.85rem;
 }
+.nav-btn:hover { opacity: 0.9; }
 
 .intro {
   margin: 0; padding: 12px 24px; background: #d6fff5; color: #0f3a30;

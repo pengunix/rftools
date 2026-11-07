@@ -13,6 +13,7 @@ import SnackbarContent from "@mui/material/SnackbarContent";
 import { ThemeProvider } from "@mui/material/styles";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import GetAppIcon from "@mui/icons-material/GetApp";
+import HomeIcon from "@mui/icons-material/Home";
 
 import { theme } from "./commonFunctions.js"; // import your theme
 
@@ -61,6 +62,11 @@ function NavBar() {
               </Typography>
             </Stack>
             <Stack spacing={1} direction={{ xs: "column", sm: "row" }} sx={{ alignItems: "center" }}>
+              <Tooltip title={t("nav.home")} placement="bottom">
+                <IconButton aria-label={t("nav.home")} color="bland" component="a" href="../../index.html">
+                  <HomeIcon sx={{ fontSize: 30, color: "rgb(184, 255, 241)" }} />
+                </IconButton>
+              </Tooltip>
               <LanguageSwitcher />
               <Tooltip title={t("nav.copyUrl")} placement="bottom">
                 <IconButton

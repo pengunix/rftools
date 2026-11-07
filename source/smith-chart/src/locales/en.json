@@ -17,6 +17,7 @@
     "im": "Im"
   },
   "nav": {
+      "home": "Home",
     "title": "ONLINE SMITH CHART TOOL",
     "copyUrl": "Copy shareable URL",
     "copyUrlAria": "Copy shareable URL to clipboard",

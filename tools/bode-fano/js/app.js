@@ -25,6 +25,7 @@ const state = {
 const I18N = {
   zh: {
     "nav.title": "Bode-Fano 计算器",
+    "nav.home": "返回主页",
     "intro": "Bode-Fano 判据给出：任何无耗匹配网络都无法在任意带宽内把有耗电抗负载匹配到完美。本工具计算给定负载在指定带宽下可达到的最小反射系数，或给定反射系数下的最大带宽。",
     "load.heading": "负载类型",
     "load.parallelRC": "并联 RC",
@@ -58,6 +59,7 @@ const I18N = {
   },
   en: {
     "nav.title": "Bode-Fano Calculator",
+    "nav.home": "Home",
     "intro": "The Bode-Fano criterion states that no lossless matching network can perfectly match a lossy reactive load over arbitrary bandwidth. This tool computes the minimum achievable reflection coefficient for a given bandwidth, or the maximum bandwidth for a given reflection coefficient.",
     "load.heading": "Load Type",
     "load.parallelRC": "Parallel RC",
@@ -120,7 +122,7 @@ function gammaToVswr(g) {
 }
 
 // ---- 核心 Bode-Fano ----
-// 返回 K（∫ln(1/|Γ|)dω 的上限常数，rad/s 单位），用于后续换算
+// 返回 K（∫ln(1/|Γ|)dω 的上限常数）相关信息，用于后续换算
 function bodeFanoK(loadType, R, X /** X = C 或 L 的 SI 值 */) {
   if (loadType === "parallelRC" || loadType === "seriesRC") {
     // K = π/(R C)  =>  以 Δf:  ln(1/Γ) = 1/(2 R C Δf)
@@ -133,15 +135,12 @@ function bodeFanoK(loadType, R, X /** X = C 或 L 的 SI 值 */) {
 
 // 给定带宽 Δf(Hz) → Γ_min
 function gammaMinForBandwidth(bf, dfHz) {
-  // Δω·ln(1/Γ) ≤ K  =>  ln(1/Γ) ≤ K/Δω = lnTerm / Δf
-  // Γ_min = exp( -lnTerm / Δf )
   return Math.exp((-bf.lnTerm) / dfHz);
 }
 
 // 给定 Γ → Δω_max = K / ln(1/Γ) → Δf_max
 function bandwidthForGamma(bf, gamma) {
   const lnInv = Math.log(1 / gamma);
-  // Δf_max = lnTerm / ln(1/Γ)
   return bf.lnTerm / lnInv;
 }
 
@@ -199,7 +198,6 @@ function compute() {
 
   const rl = -20 * Math.log10(gammaMin);
   const vswr = gammaToVswr(gammaMin);
-  // 负载 Q（在高频近似下）：RC: Q=ωRC；RL: Q=ωL/R —— 这里给单位角频率的“时间常数×ω”，即归一 Q 常数
   const qConst = bf.family === "RC" ? R * X : X / R; // 秒；Q = ω·qConst
 
   const items = [
@@ -231,13 +229,12 @@ function drawChart(ctx) {
   if (!ctx) return;
 
   const { bf, markingBwHz } = ctx;
-  // 带宽范围：从 mark/10^2 到 mark*10^2（至少跨 4 个数量级）
   const center = markingBwHz > 0 ? markingBwHz : 1e6;
   const fMin = center / 1e2;
   const fMax = center * 1e2;
 
-  const gMin = 1e-3; // 纵轴下界
-  const gMax = 1;    // 纵轴上界
+  const gMin = 1e-3;
+  const gMax = 1;
   const xOf = (f) => pad.l + ((Math.log10(f) - Math.log10(fMin)) / (Math.log10(fMax) - Math.log10(fMin))) * iw;
   const yOf = (g) => pad.t + ih - ((Math.log10(Math.max(g, gMin)) - Math.log10(gMin)) / (Math.log10(gMax) - Math.log10(gMin))) * ih;
 
@@ -250,7 +247,6 @@ function drawChart(ctx) {
 
   svg.appendChild(el("rect", { x: 0, y: 0, width: W, height: H, fill: "#fff" }));
 
-  // 网格：横轴每 10 倍一条
   const decades = Math.round(Math.log10(fMax) - Math.log10(fMin));
   for (let i = 0; i <= decades; i++) {
     const f = fMin * Math.pow(10, i);
@@ -260,7 +256,6 @@ function drawChart(ctx) {
     tx.textContent = fmtFreq(f);
     svg.appendChild(tx);
   }
-  // 纵轴：Γ = 1, 0.3, 0.1, 0.03, 0.01 ...
   const gTicks = [1, 0.3, 0.1, 0.03, 0.01, 0.003, 0.001];
   for (const g of gTicks) {
     if (g > gMax || g < gMin - 1e-9) continue;
@@ -271,7 +266,6 @@ function drawChart(ctx) {
     svg.appendChild(tx);
   }
 
-  // 曲线样本
   let d = "";
   const N = 200;
   for (let i = 0; i <= N; i++) {
@@ -283,7 +277,6 @@ function drawChart(ctx) {
   }
   svg.appendChild(el("path", { d, fill: "none", stroke: "#1f6feb", "stroke-width": 2 }));
 
-  // 标记线：当前带宽
   if (markingBwHz >= fMin && markingBwHz <= fMax) {
     const x = xOf(markingBwHz);
     svg.appendChild(el("line", { x1: x, y1: pad.t, x2: x, y2: pad.t + ih, stroke: "#e04747", "stroke-width": 1.5, "stroke-dasharray": "4 3" }));
@@ -294,7 +287,6 @@ function drawChart(ctx) {
     svg.appendChild(lbl);
   }
 
-  // 轴标题
   const xl = el("text", { x: pad.l + iw / 2, y: H - 4, "font-size": "11", "text-anchor": "middle", fill: "#48594f" });
   xl.textContent = "Δf (" + (state.lang === "zh" ? "带宽" : "bandwidth") + ")";
   svg.appendChild(xl);

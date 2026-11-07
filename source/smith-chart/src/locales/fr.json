@@ -17,6 +17,7 @@
     "im": "Im"
   },
   "nav": {
+      "home": "Accueil",
     "title": "OUTIL SMITH EN LIGNE",
     "copyUrl": "Copier l’URL partageable",
     "copyUrlAria": "Copier l’URL partageable dans le presse-papiers",

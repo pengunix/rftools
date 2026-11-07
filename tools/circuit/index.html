@@ -165,5 +165,31 @@
     <!-- Include a history iframe to enable full GWT history support -->
     <!-- (the id must be exactly as shown)                           -->
     <iframe src="javascript:''" id="__gwt_historyFrame" style="width:0;height:0;border:0"></iframe>
+
+    <!-- 返回主页按钮（悬浮在左上角，置于 GWT 界面之上） -->
+    <style>
+      #homeBtn {
+        position: fixed;
+        top: 6px;
+        left: 6px;
+        z-index: 2147483000;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 5px 10px;
+        background: #253240;
+        color: #b8fff1;
+        font: 600 13px/1 system-ui, "Microsoft YaHei", sans-serif;
+        text-decoration: none;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        opacity: 0.92;
+      }
+      #homeBtn:hover { opacity: 1; }
+    </style>
+    <a id="homeBtn" href="../../index.html" title="返回主页">
+      <svg viewBox="0 0 24 24" width="15" height="15"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+      <span>返回主页</span>
+    </a>
   </body>
  </html>
