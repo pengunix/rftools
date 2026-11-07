@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="./assets/logo.svg" />
+    <meta name="author" content="妙妙小工具" />
+    <meta name="description" content="Bode-Fano 判据计算器：计算给定负载在指定带宽下可达到的最小反射系数，或给定反射系数下的最大带宽。" />
+    <title>Bode-Fano 计算器</title>
+    <link rel="stylesheet" href="./css/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="nav">
+        <a class="nav-brand" href="../../index.html" title="返回工具集">
+          <img src="./assets/logo.svg" alt="Bode-Fano" width="42" height="42" />
+          <span class="nav-title" data-i18n="nav.title">Bode-Fano 计算器</span>
+        </a>
+        <div class="nav-actions">
+          <label class="lang-select">
+            <span aria-hidden="true" id="lang-flag">🇨🇳</span>
+            <select id="lang-select" aria-label="语言">
+              <option value="zh">🇨🇳 简体中文</option>
+              <option value="en">🇺🇸 English</option>
+            </select>
+          </label>
+          <a class="nav-btn home" href="../../index.html" title="首页">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+          </a>
+        </div>
+      </header>
+
+      <p class="intro" data-i18n="intro"></p>
+
+      <main class="layout">
+        <!-- 左：输入 -->
+        <section class="panel">
+          <h2 data-i18n="load.heading">负载类型</h2>
+          <div class="segmented" id="load-type">
+            <button data-type="parallelRC" class="active">并联 RC</button>
+            <button data-type="seriesRC">串联 RC</button>
+            <button data-type="parallelRL">并联 RL</button>
+            <button data-type="seriesRL">串联 RL</button>
+          </div>
+
+          <div class="field-row">
+            <label data-i18n="load.r">电阻 R</label>
+            <div class="with-unit">
+              <input id="in-r" type="number" step="any" value="10" />
+              <span class="unit">Ω</span>
+            </div>
+          </div>
+
+          <div class="field-row" id="row-c">
+            <label id="label-reactance">电容 C</label>
+            <div class="with-unit">
+              <input id="in-x" type="number" step="any" value="1" />
+              <select id="in-x-unit">
+                <option value="pF">pF</option>
+                <option value="nF">nF</option>
+                <option value="uF">µF</option>
+                <option value="fF">fF</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row">
+            <label data-i18n="load.z0">参考阻抗 Z0</label>
+            <div class="with-unit">
+              <input id="in-z0" type="number" step="any" value="50" />
+              <span class="unit">Ω</span>
+            </div>
+          </div>
+
+          <h2 data-i18n="mode.heading">计算方向</h2>
+          <div class="segmented" id="calc-mode">
+            <button data-mode="gamma" class="active" data-i18n="mode.gamma">给定带宽 → Γ<sub>min</sub></button>
+            <button data-mode="bw" data-i18n="mode.bw">给定 Γ → 最大带宽</button>
+          </div>
+
+          <div class="field-row" id="row-bw">
+            <label data-i18n="mode.bandwidth">带宽 Δf</label>
+            <div class="with-unit">
+              <input id="in-bw" type="number" step="any" value="100" />
+              <select id="in-bw-unit">
+                <option value="MHz">MHz</option>
+                <option value="kHz">kHz</option>
+                <option value="GHz">GHz</option>
+                <option value="Hz">Hz</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="field-row" id="row-gamma" hidden>
+            <label data-i18n="mode.gammaTarget">目标反射系数 |Γ|</label>
+            <div class="with-unit">
+              <input id="in-gamma" type="number" step="0.01" min="0" max="0.999" value="0.1" />
+              <span class="unit">0–1</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 右：结果 -->
+        <section class="results">
+          <div class="result-card">
+            <h2 data-i18n="result.title">结果</h2>
+            <div class="big-grid" id="out-grid"></div>
+            <p class="note" id="out-note"></p>
+          </div>
+
+          <div class="result-card">
+            <h2 data-i18n="chart.title">反射系数下限 vs 带宽</h2>
+            <p class="note" data-i18n="chart.desc"></p>
+            <div class="chart-host" id="chart-host"></div>
+          </div>
+
+          <details class="result-card formula-card">
+            <summary data-i18n="formula.title">使用的公式与约定</summary>
+            <div class="formula-body" id="formula-body"></div>
+          </details>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <span data-i18n="footer.license"></span>
+        <a href="../../index.html" data-i18n="footer.home">工具集首页</a>
+      </footer>
+    </div>
+
+    <script type="module" src="./js/app.js"></script>
+  </body>
+</html>

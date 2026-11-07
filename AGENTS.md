@@ -3,11 +3,15 @@
 本仓库是「妙妙小工具」在线工具集。根目录是工具集总入口，`tools/` 下每个子文件夹是一个独立工具，
 纯静态托管，可直接部署到 GitHub Pages。
 
-当前包含一个工具：**史密斯圆图**（`tools/smith-chart/`）。
+当前包含工具：
+- **史密斯圆图**（`tools/smith-chart/`）—— 高保真复刻，含源码与定制功能。
+- **Bode-Fano 计算器**（`tools/bode-fano/`）—— 纯手写静态工具（原生物理公式实现）。
 
 > 与最初「直接使用源站产物」不同，现在史密斯圆图有一套**可修改的源码**（在 `source/smith-chart/`），
 > 基于上游开源项目 `github.com/28raining/smith-chart`，并做了本项目定制（见第 4 节）。
 > 修改功能时改源码 → 构建 → 把 `dist/` 复制到 `tools/smith-chart/`。
+> Bode-Fano 是手写零依赖静态页，直接改 `tools/bode-fano/` 即可，无需构建。
+
 
 ---
 
@@ -30,11 +34,16 @@
 │       ├── package.json / vite.config.js
 │       └── ...                   # tests/ scripts/ tutorials/ 等上游文件
 │
-└── tools/                        # 各工具的【构建产物】（发布这里）
-    └── smith-chart/              # = source/smith-chart 的 dist 输出
+└── tools/                        # 各工具的【构建产物 / 静态页】（发布这里）
+    ├── smith-chart/              # = source/smith-chart 的 dist 输出
+    │   ├── index.html
+    │   ├── favicon.svg
+    │   └── assets/               # 哈希文件名的 JS/CSS/语言包
+    └── bode-fano/                # Bode-Fano 计算器（手写零依赖静态页）
         ├── index.html
-        ├── favicon.svg
-        └── assets/               # 哈希文件名的 JS/CSS/语言包
+        ├── css/style.css
+        ├── assets/logo.svg
+        └── js/app.js             # i18n + Bode-Fano 公式 + SVG 曲线
 ```
 
 设计原则：
@@ -113,6 +122,30 @@ cp -r dist/* ../../tools/smith-chart/
     `WireComponent` 里渲染「重选终点」按钮。
 - **i18n**：新增 `circuit.pickHint / pickSolved / pickApprox / pickUnsolvable` 与
   `circuit.impedance.repickTooltip`，已补齐 en/zh/es/fr/tr/hi/ja 七个语言包（`src/locales/*.json`）。
+
+---
+
+## 5b. Bode-Fano 计算器（tools/bode-fano）
+
+零依赖手写静态页（`index.html` + `css/style.css` + `js/app.js`），无需构建，直接改即可。
+
+### 功能
+- 负载类型：并联 RC / 串联 RC / 并联 RL / 串联 RL（4 种标准集总负载）
+- 双向计算：
+  - **给定带宽 Δf → 最小反射系数 Γ_min**
+  - **给定 Γ → 最大可达带宽 Δf_max**
+- 输出：Γ_min、回波损耗(dB)、对应 VSWR、Δf_max、负载时间常数、以及 Γ_min–带宽 曲线（红线标当前值）
+- 中英文切换
+
+### 公式（等纹波理想匹配，带宽以 Hz 表示；串联/并联拓扑常数相同，取决于负载时间常数）
+- **RC**：`∫ln(1/|Γ|)dω ≤ π/(RC)`
+  - `Γ_min = exp(−1/(2·R·C·Δf))`
+  - `Δf_max = 1/(2·R·C·ln(1/Γ))`
+- **RL**：`∫ln(1/|Γ|)dω ≤ πR/L`
+  - `Γ_min = exp(−R/(2·L·Δf))`
+  - `Δf_max = R/(2·L·ln(1/Γ))`
+
+实现见 `tools/bode-fano/js/app.js`（`bodeFanoK / gammaMinForBandwidth / bandwidthForGamma`）。
 
 ---
 
