@@ -6,6 +6,7 @@
 当前包含工具：
 - **史密斯圆图**（`tools/smith-chart/`）—— 高保真复刻，含源码与定制功能。
 - **Bode-Fano 计算器**（`tools/bode-fano/`）—— 纯手写静态工具（原生物理公式实现）。
+- **在线电路模拟器**（`tools/circuit/`）—— 复刻 CircuitJS1 web 版（GWT 产物，抓自 cc.xiaogd.net）。
 
 > 与最初「直接使用源站产物」不同，现在史密斯圆图有一套**可修改的源码**（在 `source/smith-chart/`），
 > 基于上游开源项目 `github.com/28raining/smith-chart`，并做了本项目定制（见第 4 节）。
@@ -44,6 +45,12 @@
         ├── css/style.css
         ├── assets/logo.svg
         └── js/app.js             # i18n + Bode-Fano 公式 + SVG 曲线
+    └── circuit/                  # 在线电路模拟器（CircuitJS1 GWT 产物，抓自 cc.xiaogd.net）
+        ├── index.html            # GWT 入口
+        ├── lz-string.min.js
+        ├── font/                 # fontello 图标字体
+        └── circuitjs1/           # GWT 编译产物：nocache.js、*.cache.js、locale_zh.txt、
+                                  #   setuplist.txt、style.css、circuits/ 等
 ```
 
 设计原则：
@@ -146,6 +153,23 @@ cp -r dist/* ../../tools/smith-chart/
   - `Δf_max = R/(2·L·ln(1/Γ))`
 
 实现见 `tools/bode-fano/js/app.js`（`bodeFanoK / gammaMinForBandwidth / bandwidthForGamma`）。
+
+---
+
+## 5c. 在线电路模拟器（tools/circuit）
+
+复刻 https://cc.xiaogd.net（CircuitJS1 web 版，开源项目 github.com/sharpie7/circuitjs1）。
+内容是 CircuitJS1 的 **GWT 编译产物**，抓自源站，只做了本地化清理：
+
+- 移除 `index.html` 里的 Google Analytics(gtag) 与百度统计脚本。
+- `locale_zh.txt` 等文本资源需以 **UTF-8 原始字节**保存（抓取时勿用 latin1 解码，否则中文乱码）。
+- 保持站点相对路径；`circuitjs1/setuplist.txt?v=...` 的查询串由静态服务器忽略即可正常返回。
+
+功能：浏览器内实时电路仿真——绘制电路（电阻/电容/电感/电源/开关/二极管/晶体管等）、
+运行/暂停、示波器波形、参数滑块、示例电路等。
+
+> 该工具需通过 HTTP 服务器访问（GWT 依赖 XHR 加载 locale/setuplist），
+> 不能 `file://` 直接打开。修改 UI/元件需重新构建上游 GWT 工程，本仓库只托管其产物。
 
 ---
 

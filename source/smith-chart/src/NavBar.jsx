@@ -4,7 +4,6 @@ import AppBar from "@mui/material/AppBar";
 import Box from "@mui/material/Box";
 import Toolbar from "@mui/material/Toolbar";
 import Typography from "@mui/material/Typography";
-import Button from "@mui/material/Button";
 import IconButton from "@mui/material/IconButton";
 import Stack from "@mui/material/Stack";
 import Snackbar from "@mui/material/Snackbar";
@@ -18,7 +17,6 @@ import GetAppIcon from "@mui/icons-material/GetApp";
 import { theme } from "./commonFunctions.js"; // import your theme
 
 import SmithChartSvg from "./assets/smith-chart-icon.svg"; // import your SVG file
-import Home from "./assets/home.svg"; // import your SVG file
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 
 function NavBar() {
@@ -90,21 +88,6 @@ function NavBar() {
                   <RestartAltIcon sx={{ fontSize: 30, color: "rgb(184, 255, 241)" }} />
                 </IconButton>
               </Tooltip>
-            </Stack>
-
-            <Stack spacing={1} direction={{ xs: "column", sm: "row" }}>
-              <Button variant="contained" color="bland" component="a" href="https://www.will-kelsey.com" size="small">
-                <img src={Home} alt="home" width="24" />
-              </Button>
-              <Button variant="contained" color="bland" component="a" href="https://onlinesmithchart.com" size="small">
-                {t("nav.smithChart")}
-              </Button>
-              <Button variant="contained" color="bland" component="a" href="https://onlinecircuitsolver.com" size="small">
-                {t("nav.circuitSolver")}
-              </Button>
-              <Button variant="contained" color="bland" component="a" href="https://trgmc.net" size="small">
-                TRGMC
-              </Button>
             </Stack>
           </Toolbar>
         </AppBar>
